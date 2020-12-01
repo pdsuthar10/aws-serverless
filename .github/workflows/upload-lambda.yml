@@ -38,7 +38,7 @@ jobs:
         run: |
           aws s3 cp ${{ env.ARTIFACT_NAME }} s3://${{ secrets.CODEDEPLOY_BUCKET }}/${{ env.ARTIFACT_NAME }}
 
-      - name: Call to Lambda to Update
+      - name: Call to Lambda for updating function
         run: |
           aws lambda update-function-code --function-name lambda_email_updates --region us-east-1 --zip-file fileb://${{ env.ARTIFACT_NAME }}
 
