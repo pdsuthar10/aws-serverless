@@ -111,17 +111,13 @@ exports.handler = (event, context, callback) => {
                             "QUESTION DETAILS\n"+
                             "------------------------------------------\n"+
                             "Question ID: "+dataQuestion.question_id+"\n"+
-                            "Question Text: "+dataQuestion.question_text+"\n"+
-                            "------------------------------------------\n"+
-                            "------------------------------------------\n\n"+
+                            "Question Text: "+dataQuestion.question_text+"\n\n\n\n"+
                             "ANSWER DETAILS\n"+
                             "------------------------------------------\n"+
                             "Answer ID: "+dataAnswer.answer_id+"\n"+
                             oldTemplate+"Answer Text: "+dataAnswer.answer_text+"\n"+
                             newAnswerTemplate+
-                            "Answered By: "+message.user.first_name+" "+message.user.last_name+"\n"+
-                            "------------------------------------------\n"+
-                            "------------------------------------------\n\n"+
+                            "Answered By: "+message.user.first_name+" "+message.user.last_name+"\n\n\n\n"+
                             apiTemplate+
                             "Thank you!\n\n"+
                             "NOTE: THIS IS AN AUTOMATED MAIL. PLEASE DO NOT REPLY DIRECTLY TO THIS MAIL."+
