@@ -1,10 +1,27 @@
-const aws = require("aws-sdk");
-const ses = new aws.SES({ region: "us-east-1" });
-const dynamo = new aws.DynamoDB.DocumentClient();
-const hash = require('object-hash');
-exports.handler = async function (event) {
-    console.log(hash({name: "Priyam"}))
+var aws = require("aws-sdk");
+var ses = new aws.SES({ region: "us-east-1" });
+var dynamo = new aws.DynamoDB.DocumentClient();
+var crypto = require('crypto');
+
+exports.handler = (event, context, callback) => {
     let message = JSON.parse(event.Records[0].Sns.Message);
+    // let message = {
+    //     question: {
+    //         question_id: "437d50d4-2af0-4389-9498-8fb4541711a5",
+    //         question_text: "Question by Priyam?"
+    //     },
+    //     answer: {
+    //         answer_id: "12341234",
+    //         answer_text: "Test"
+    //     },
+    //     user: {
+    //         first_name: "Sample",
+    //         last_name: "Test"
+    //     },
+    //     ToAddresses: {
+    //         first_name: "QuestionUser"
+    //     }
+    // }
     let dataQuestion = message.question;
     let dataAnswer = message.answer;
     let newObject = {
@@ -15,38 +32,51 @@ exports.handler = async function (event) {
         answer_text: message.updatedAnswerText,
         type: message.type
     };
-    let calculatedHash = hash(newObject);
-    var searchParams = {
+    let stringToHash = message.ToAddresses.id+","+dataQuestion.question_id+","+
+        message.user.id+","+dataAnswer.answer_id+","+message.updatedAnswerText+","+message.type;
+    if(message.type === 'POST'){
+        stringToHash = message.ToAddresses.id+","+dataQuestion.question_id+","+
+            message.user.id+","+dataAnswer.answer_text+","+message.type;
+    }
+    let shasum = crypto.createHash('sha256');
+    shasum.update(stringToHash)
+    let calculatedHash = shasum.digest('hex');
+    let searchParams = {
         TableName: "csye6225",
         Key: {
-            email_hash: calculatedHash
+            "email_hash": calculatedHash
         }
     };
+    console.log("Checking if record already present in db");
     dynamo.get(searchParams, function(error, retrievedRecord){
+        console.log("in here")
         if(error){
             console.log("Error in DynamoDB get method ",error);
         }else{
-            console.log("Success in get method dynamoDB", data1);
+            console.log("Success in get method dynamoDB", retrievedRecord);
             console.log(JSON.stringify(retrievedRecord));
             let found = false;
             if (retrievedRecord.Item == null || retrievedRecord.Item == undefined) {
                 found = false;
             }else {
-                if (retrievedRecord.Item.ttl > new Date().getTime()) {
+                if (retrievedRecord.Item.ttl > Math.floor(Date.now() / 1000)) {
                     found = true;
                 }
             }
             if(!found){
-                const current = new Date().getTime()
-                const timeToLive = 1000 * 60 * 4
+                const current = Math.floor(Date.now() / 1000)
+                let timeToLive = 60 * 4
+                if(message.type === 'POST') timeToLive = 60 * 60 * 24 * 10
                 const expireWithIn = timeToLive + current
                 const params = {
                     Item: {
                         email_hash: calculatedHash,
-                        ttl: expiry,
+                        ttl: expireWithIn,
                         question_user_id: newObject.question_user_id,
+                        question_id: newObject.question_id,
                         answer_user_id: newObject.answer_user_id,
-                        time_created: new Date(),
+                        answer_id: newObject.answer_id,
+                        time_created: new Date().getTime(),
                         type: newObject.type
                     },
                     TableName: "csye6225"
@@ -55,7 +85,7 @@ exports.handler = async function (event) {
                 dynamo.put(params, function (error, data){
                     if(error) console.log("Error in putting item in DynamoDB ", error)
                     else{
-                        console.log("Success", data);
+                        // console.log("Success", data);
                         let updateTemplate= "";
                         let apiTemplate = "";
                         let oldTemplate = "";
@@ -127,4 +157,5 @@ exports.handler = async function (event) {
             }else console.log("Item already present. No email sent!")
         }
     })
+    console.log("in end")
 };
