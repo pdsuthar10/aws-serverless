@@ -26,7 +26,7 @@ exports.handler = async function (event) {
 
     let data = "Hello "+ message.ToAddresses.first_name +",\n"+
         updateTemplate + message.user.first_name+".\n\n"+
-        "QUESTION DETAIL\n"+
+        "QUESTION DETAILS\n"+
         "------------------------------------------\n"+
         "Question ID: "+dataQuestion.question_id+"\n"+
         "Question Text: "+dataQuestion.question_text+"\n"+
