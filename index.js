@@ -6,6 +6,7 @@ require('dotenv').config();
 
 exports.handler = (event, context, callback) => {
     let message = JSON.parse(event.Records[0].Sns.Message);
+    console.log(JSON.stringify(message))
     let dataQuestion = message.question;
     let dataAnswer = message.answer;
     let newObject = {
