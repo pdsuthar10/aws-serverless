@@ -77,7 +77,7 @@ exports.handler = (event, context, callback) => {
                 if(message.type === 'DELETE'){
                     let searchParams = {
                         TableName: "csye6225",
-                        ProjectionExpression: "#qid, #aid",
+                        ProjectionExpression: "#qid, #aid, email_hash",
                         FilterExpression: "#qid = :question_id AND #aid = :answer_id",
                         ExpressionAttributeNames:{
                             "#qid" : "question_id",
@@ -94,6 +94,7 @@ exports.handler = (event, context, callback) => {
                         else{
                             console.log("Scan succeeded...")
                             data.Items.forEach(function (record){
+                                console.log(record)
                                 let deleteParams = {
                                     TableName: "csye6225",
                                     Key: {
@@ -101,7 +102,7 @@ exports.handler = (event, context, callback) => {
                                     }
                                 }
                                 dynamo.delete(deleteParams, function (error, data){
-                                    if(error) console.log("Error in deleting record...")
+                                    if(error) console.log("Error in deleting record...",error)
                                     else console.log("Deleted record successfully....")
                                 })
                             })
