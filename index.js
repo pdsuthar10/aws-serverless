@@ -34,7 +34,7 @@ exports.handler = (event, context, callback) => {
         type: message.type
     };
     let stringToHash = message.ToAddresses.id+","+dataQuestion.question_id+","+
-        message.user.id+","+dataAnswer.answer_id+","+message.updatedAnswerText+","+message.type;
+        message.user.id+","+dataAnswer.answer_id+","+message.type;
     if(message.type === 'POST'){
         stringToHash = message.ToAddresses.id+","+dataQuestion.question_id+","+
             message.user.id+","+dataAnswer.answer_text+","+message.type;
@@ -60,14 +60,12 @@ exports.handler = (event, context, callback) => {
             if (retrievedRecord.Item == null || retrievedRecord.Item == undefined) {
                 found = false;
             }else {
-                if (retrievedRecord.Item.ttl > Math.floor(Date.now() / 1000)) {
+                if(retrievedRecord.Item.answer_text === newObject.answer_text)
                     found = true;
-                }
             }
             if(!found){
                 const current = Math.floor(Date.now() / 1000)
-                let timeToLive = 60 * 4
-                if(message.type === 'POST') timeToLive = 60 * 60 * 24 * 10
+                let timeToLive = 60 * 60 * 24 * 10
                 const expireWithIn = timeToLive + current
                 const params = {
                     Item: {
@@ -77,6 +75,7 @@ exports.handler = (event, context, callback) => {
                         question_id: newObject.question_id,
                         answer_user_id: newObject.answer_user_id,
                         answer_id: newObject.answer_id,
+                        answer_text: newObject.answer_text,
                         time_created: new Date().getTime(),
                         type: newObject.type
                     },
@@ -151,7 +150,27 @@ exports.handler = (event, context, callback) => {
                             });
                     }
                 })
-            }else console.log("Item already present. No email sent!")
+            }else {
+                if(message.type === 'UPDATE'){
+                    let params = {
+                        Key: {
+                            email_hash: calculatedHash
+                        },
+                        TableName : "csye6225",
+                        AttributeUpdates: {
+                            answer_text: {
+                                Action: PUT,
+                                Value: newObject.answer_text
+                            }
+                        }
+                    }
+                    dynamo.update(params, function (error, data){
+                        if(error) console.log(error)
+                        else console.log("Updated item successfully in DynamoDB...", JSON.stringify(data))
+                    })
+                }
+                console.log("Item already present. No email sent!")
+            }
         }
     })
     console.log("in end")
