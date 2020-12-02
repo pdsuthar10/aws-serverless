@@ -93,7 +93,7 @@ exports.handler = (event, context, callback) => {
                     if(error) console.log("Error in putting item in DynamoDB ", error)
                     else{
                         // console.log("Success", data);
-                        sendEmail(message);
+                        sendEmail(message, dataQuestion, dataAnswer);
                     }
                 })
             }else {
@@ -115,7 +115,7 @@ exports.handler = (event, context, callback) => {
                         else {
                             console.log("Updated item successfully in DynamoDB...", JSON.stringify(data))
                             console.log("Sending email of Update...")
-                            sendEmail(message)
+                            sendEmail(message, dataQuestion, dataAnswer)
                         }
                     })
 
@@ -126,7 +126,7 @@ exports.handler = (event, context, callback) => {
     console.log("in end")
 };
 
-var sendEmail = (message) => {
+var sendEmail = (message, dataQuestion, dataAnswer) => {
     let updateTemplate= "";
     let apiTemplate = "";
     let oldTemplate = "";
