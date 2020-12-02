@@ -6,23 +6,6 @@ require('dotenv').config();
 
 exports.handler = (event, context, callback) => {
     let message = JSON.parse(event.Records[0].Sns.Message);
-    // let message = {
-    //     question: {
-    //         question_id: "437d50d4-2af0-4389-9498-8fb4541711a5",
-    //         question_text: "Question by Priyam?"
-    //     },
-    //     answer: {
-    //         answer_id: "12341234",
-    //         answer_text: "Test"
-    //     },
-    //     user: {
-    //         first_name: "Sample",
-    //         last_name: "Test"
-    //     },
-    //     ToAddresses: {
-    //         first_name: "QuestionUser"
-    //     }
-    // }
     let dataQuestion = message.question;
     let dataAnswer = message.answer;
     let newObject = {
@@ -33,6 +16,7 @@ exports.handler = (event, context, callback) => {
         answer_text: message.updatedAnswerText,
         type: message.type
     };
+    //Generate HASH Value for comparision of records
     let stringToHash = message.ToAddresses.id+","+dataQuestion.question_id+","+
         message.user.id+","+dataAnswer.answer_id+","+message.type;
     if(message.type === 'POST'){
@@ -42,6 +26,8 @@ exports.handler = (event, context, callback) => {
     let shasum = crypto.createHash('sha256');
     shasum.update(stringToHash)
     let calculatedHash = shasum.digest('hex');
+
+    //Finding the record in DynamoDB
     let searchParams = {
         TableName: "csye6225",
         Key: {
@@ -50,7 +36,6 @@ exports.handler = (event, context, callback) => {
     };
     console.log("Checking if record already present in db");
     dynamo.get(searchParams, function(error, retrievedRecord){
-        console.log("in here")
         if(error){
             console.log("Error in DynamoDB get method ",error);
         }else{
@@ -63,9 +48,9 @@ exports.handler = (event, context, callback) => {
             }else {
                 if(retrievedRecord.Item.answer_text === newObject.answer_text)
                 {
-                    found = true;
                     isSameAnswer = true;
                 }
+                found = true;
             }
             if(!found){
                 const current = Math.floor(Date.now() / 1000)
@@ -89,13 +74,17 @@ exports.handler = (event, context, callback) => {
                     TableName: "csye6225"
                 }
 
-                dynamo.put(params, function (error, data){
-                    if(error) console.log("Error in putting item in DynamoDB ", error)
-                    else{
-                        // console.log("Success", data);
-                        sendEmail(message, dataQuestion, dataAnswer);
-                    }
-                })
+                if(message.type === 'DELETE'){
+                    sendEmail(message, dataQuestion, dataAnswer)
+                }else {
+                    dynamo.put(params, function (error, data) {
+                        if (error) console.log("Error in putting item in DynamoDB ", error)
+                        else {
+                            // console.log("Success", data);
+                            sendEmail(message, dataQuestion, dataAnswer);
+                        }
+                    })
+                }
             }else {
                 if(message.type === 'UPDATE' && !isSameAnswer){
                     let params = {
@@ -146,6 +135,8 @@ var sendEmail = (message, dataQuestion, dataAnswer) => {
     else if(message.type === "UPDATE")
         apiTemplate = "Click here to view your question: http://"+message.questionGetApi+"\n"+
             "Click here to view updated answer: http://"+message.answerGetApi+"\n"
+    else
+        apiTemplate = "Click here to view your question: http://"+message.questionGetApi+"\n"
 
     let data = "Hello "+ message.ToAddresses.first_name +",\n"+
         updateTemplate + message.user.first_name+".\n\n"+
