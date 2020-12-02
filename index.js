@@ -71,6 +71,9 @@ exports.handler = (event, context, callback) => {
                 const current = Math.floor(Date.now() / 1000)
                 let timeToLive = 60 * 60 * 24 * 10
                 const expireWithIn = timeToLive + current
+                let answerToShow = dataAnswer.answer_text
+                if(message.type === 'UPDATE')
+                    answerToShow = newObject.answer_text
                 const params = {
                     Item: {
                         email_hash: calculatedHash,
@@ -79,7 +82,7 @@ exports.handler = (event, context, callback) => {
                         question_id: newObject.question_id,
                         answer_user_id: newObject.answer_user_id,
                         answer_id: newObject.answer_id,
-                        answer_text: newObject.answer_text,
+                        answer_text: answerToShow,
                         time_created: new Date().getTime(),
                         type: newObject.type
                     },
