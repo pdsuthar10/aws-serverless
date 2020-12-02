@@ -124,9 +124,9 @@ exports.handler = (event, context, callback) => {
                             "NOTE: THIS IS AN AUTOMATED MAIL. PLEASE DO NOT REPLY DIRECTLY TO THIS MAIL."+
                             "IF YOU HAVE ANY COMPLAINTS OR QUESTIONS, PLEASE CONTACT US AT suthar.p@northeastern.edu"
 
-
+                        let fromMail = "no-reply@"+process.env.DOMAIN
                         //check dynamoDB
-                        var emailParams = {
+                        let emailParams = {
                             Destination: {
                                 ToAddresses: [message.ToAddresses.username],
                             },
@@ -138,7 +138,7 @@ exports.handler = (event, context, callback) => {
 
                                 Subject: { Data: "Question Notification" },
                             },
-                            Source: "no-reply@dev.suthar-priyam.me",
+                            Source: fromMail,
                         };
 
                         let sendEmailPromise = ses.sendEmail(emailParams).promise()
