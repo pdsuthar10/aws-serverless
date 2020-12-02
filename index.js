@@ -57,11 +57,15 @@ exports.handler = (event, context, callback) => {
             console.log("Success in get method dynamoDB", retrievedRecord);
             console.log(JSON.stringify(retrievedRecord));
             let found = false;
+            let isSameAnswer = false;
             if (retrievedRecord.Item == null || retrievedRecord.Item == undefined) {
                 found = false;
             }else {
                 if(retrievedRecord.Item.answer_text === newObject.answer_text)
+                {
                     found = true;
+                    isSameAnswer = true;
+                }
             }
             if(!found){
                 const current = Math.floor(Date.now() / 1000)
@@ -86,72 +90,11 @@ exports.handler = (event, context, callback) => {
                     if(error) console.log("Error in putting item in DynamoDB ", error)
                     else{
                         // console.log("Success", data);
-                        let updateTemplate= "";
-                        let apiTemplate = "";
-                        let oldTemplate = "";
-                        let newAnswerTemplate = "";
-                        if(message.type === "POST")
-                            updateTemplate = "An answer is posted to your question by ";
-                        else if(message.type === "UPDATE"){
-                            updateTemplate = "An answer posted to your question was updated by ";
-                            oldTemplate = "Old ";
-                            newAnswerTemplate = "Updated Answer Text: "+message.updatedAnswerText+"\n"
-                        }else
-                            updateTemplate = "An answer posted to your question was deleted by ";
-
-                        if(message.type === "POST")
-                            apiTemplate = "Click here to view your question: http://"+message.questionGetApi+"\n"+
-                                "Click here to view answer posted: http://"+message.answerGetApi+"\n"
-                        else if(message.type === "UPDATE")
-                            apiTemplate = "Click here to view your question: http://"+message.questionGetApi+"\n"+
-                                "Click here to view updated answer: http://"+message.answerGetApi+"\n"
-
-                        let data = "Hello "+ message.ToAddresses.first_name +",\n"+
-                            updateTemplate + message.user.first_name+".\n\n"+
-                            "QUESTION DETAILS\n"+
-                            "------------------------------------------\n"+
-                            "Question ID: "+dataQuestion.question_id+"\n"+
-                            "Question Text: "+dataQuestion.question_text+"\n\n\n\n"+
-                            "ANSWER DETAILS\n"+
-                            "------------------------------------------\n"+
-                            "Answer ID: "+dataAnswer.answer_id+"\n"+
-                            oldTemplate+"Answer Text: "+dataAnswer.answer_text+"\n"+
-                            newAnswerTemplate+
-                            "Answered By: "+message.user.first_name+" "+message.user.last_name+"\n\n\n\n"+
-                            apiTemplate+
-                            "Thank you!\n\n"+
-                            "NOTE: THIS IS AN AUTOMATED MAIL. PLEASE DO NOT REPLY DIRECTLY TO THIS MAIL."+
-                            "IF YOU HAVE ANY COMPLAINTS OR QUESTIONS, PLEASE CONTACT US AT suthar.p@northeastern.edu"
-
-                        let fromMail = "no-reply@"+process.env.DOMAIN
-                        //check dynamoDB
-                        let emailParams = {
-                            Destination: {
-                                ToAddresses: [message.ToAddresses.username],
-                            },
-                            Message: {
-                                Body: {
-                                    Text: { Data: data
-                                    },
-                                },
-
-                                Subject: { Data: "Question Notification" },
-                            },
-                            Source: fromMail,
-                        };
-
-                        let sendEmailPromise = ses.sendEmail(emailParams).promise()
-                        sendEmailPromise
-                            .then(function(result) {
-                                console.log(result);
-                            })
-                            .catch(function(err) {
-                                console.error(err, err.stack);
-                            });
+                        sendEmail(message);
                     }
                 })
             }else {
-                if(message.type === 'UPDATE'){
+                if(message.type === 'UPDATE' && !isSameAnswer){
                     let params = {
                         Key: {
                             email_hash: calculatedHash
@@ -159,19 +102,88 @@ exports.handler = (event, context, callback) => {
                         TableName : "csye6225",
                         AttributeUpdates: {
                             answer_text: {
-                                Action: PUT,
+                                Action: "PUT",
                                 Value: newObject.answer_text
                             }
                         }
                     }
                     dynamo.update(params, function (error, data){
                         if(error) console.log(error)
-                        else console.log("Updated item successfully in DynamoDB...", JSON.stringify(data))
+                        else {
+                            console.log("Updated item successfully in DynamoDB...", JSON.stringify(data))
+                            console.log("Sending email of Update...")
+                            sendEmail(message)
+                        }
                     })
-                }
-                console.log("Item already present. No email sent!")
+
+                }else console.log("Item already present. No email sent!")
             }
         }
     })
     console.log("in end")
 };
+
+const sendEmail = (message) => {
+    let updateTemplate= "";
+    let apiTemplate = "";
+    let oldTemplate = "";
+    let newAnswerTemplate = "";
+    if(message.type === "POST")
+        updateTemplate = "An answer is posted to your question by ";
+    else if(message.type === "UPDATE"){
+        updateTemplate = "An answer posted to your question was updated by ";
+        oldTemplate = "Old ";
+        newAnswerTemplate = "Updated Answer Text: "+message.updatedAnswerText+"\n"
+    }else
+        updateTemplate = "An answer posted to your question was deleted by ";
+
+    if(message.type === "POST")
+        apiTemplate = "Click here to view your question: http://"+message.questionGetApi+"\n"+
+            "Click here to view answer posted: http://"+message.answerGetApi+"\n"
+    else if(message.type === "UPDATE")
+        apiTemplate = "Click here to view your question: http://"+message.questionGetApi+"\n"+
+            "Click here to view updated answer: http://"+message.answerGetApi+"\n"
+
+    let data = "Hello "+ message.ToAddresses.first_name +",\n"+
+        updateTemplate + message.user.first_name+".\n\n"+
+        "QUESTION DETAILS\n"+
+        "------------------------------------------\n"+
+        "Question ID: "+dataQuestion.question_id+"\n"+
+        "Question Text: "+dataQuestion.question_text+"\n\n\n\n"+
+        "ANSWER DETAILS\n"+
+        "------------------------------------------\n"+
+        "Answer ID: "+dataAnswer.answer_id+"\n"+
+        oldTemplate+"Answer Text: "+dataAnswer.answer_text+"\n"+
+        newAnswerTemplate+
+        "Answered By: "+message.user.first_name+" "+message.user.last_name+"\n\n\n\n"+
+        apiTemplate+
+        "Thank you!\n\n"+
+        "NOTE: THIS IS AN AUTOMATED MAIL. PLEASE DO NOT REPLY DIRECTLY TO THIS MAIL."+
+        "IF YOU HAVE ANY COMPLAINTS OR QUESTIONS, PLEASE CONTACT US AT suthar.p@northeastern.edu"
+
+    let fromMail = "no-reply@"+process.env.DOMAIN
+    //check dynamoDB
+    let emailParams = {
+        Destination: {
+            ToAddresses: [message.ToAddresses.username],
+        },
+        Message: {
+            Body: {
+                Text: { Data: data
+                },
+            },
+
+            Subject: { Data: "Question Notification" },
+        },
+        Source: fromMail,
+    };
+
+    let sendEmailPromise = ses.sendEmail(emailParams).promise()
+    sendEmailPromise
+        .then(function(result) {
+            console.log(result);
+        })
+        .catch(function(err) {
+            console.error(err, err.stack);
+        });
+}
