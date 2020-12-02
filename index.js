@@ -77,6 +77,7 @@ exports.handler = (event, context, callback) => {
                     TableName: "csye6225"
                 }
 
+                /*if request was for delete then delete qid+aid records combination from Dynamo and send mail */
                 if(message.type === 'DELETE'){
                     let searchParams = {
                         TableName: "csye6225",
@@ -117,12 +118,17 @@ exports.handler = (event, context, callback) => {
                     dynamo.put(params, function (error, data) {
                         if (error) console.log("Error in putting item in DynamoDB ", error)
                         else {
-                            // console.log("Success", data);
+                            console.log("Success", data);
                             sendEmail(message, dataQuestion, dataAnswer);
                         }
                     })
                 }
             }else {
+                /*if record is found then depending on request type handle duplication
+                *   For UPDATE = [ if answer text is different, then update the record in Dynamo and send email
+                *                if not, then do not send email. ]
+                *   For POST = [ if record is found, that means same answer text exists for the same user
+                *                so do not send the email. ]*/
                 console.log("Similar record found in DynamoDB....")
                 if(message.type === 'UPDATE' && !isSameAnswer){
                     let params = {
@@ -177,6 +183,8 @@ var sendEmail = (message, dataQuestion, dataAnswer) => {
     else
         apiTemplate = "Click here to view your question: http://"+message.questionGetApi+"\n"
 
+
+    //Constructing email to send
     let data = "Hello "+ message.ToAddresses.first_name +",\n"+
         updateTemplate + message.user.first_name+".\n\n"+
         "QUESTION DETAILS\n"+
