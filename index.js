@@ -40,7 +40,7 @@ exports.handler = (event, context, callback) => {
         if(error){
             console.log("Error in DynamoDB get method ",error);
         }else{
-            console.log("Success in get method dynamoDB", retrievedRecord);
+            console.log("Success in get method dynamoDB");
             console.log(JSON.stringify(retrievedRecord));
             let found = false;
             let isSameAnswer = false;
@@ -54,6 +54,8 @@ exports.handler = (event, context, callback) => {
                 found = true;
             }
             if(!found){
+                console.log("Same record was not found in DynamoDB....")
+                console.log("Message Type: ", message.type)
                 const current = Math.floor(Date.now() / 1000)
                 let timeToLive = 60 * 60 * 24 * 10
                 const expireWithIn = timeToLive + current
@@ -91,7 +93,7 @@ exports.handler = (event, context, callback) => {
                     }
                     console.log("Scanning Dynamo to delete records for the answer deleted....")
                     dynamo.scan(searchParams, function (error, data){
-                        if(error) console.log("Error in scanning of DynamoDB....")
+                        if(error) console.log("Error in scanning of DynamoDB....", error)
                         else{
                             console.log("Scan succeeded...")
                             data.Items.forEach(function (record){
@@ -111,6 +113,7 @@ exports.handler = (event, context, callback) => {
                     })
                     sendEmail(message, dataQuestion, dataAnswer)
                 }else {
+                    console.log("Putting the Item in DynamoDB......")
                     dynamo.put(params, function (error, data) {
                         if (error) console.log("Error in putting item in DynamoDB ", error)
                         else {
@@ -120,6 +123,7 @@ exports.handler = (event, context, callback) => {
                     })
                 }
             }else {
+                console.log("Similar record found in DynamoDB....")
                 if(message.type === 'UPDATE' && !isSameAnswer){
                     let params = {
                         Key: {
@@ -133,11 +137,12 @@ exports.handler = (event, context, callback) => {
                             }
                         }
                     }
+                    console.log("Similar record with different answer found.....")
+                    console.log("Updating the item in DynamoDB......")
                     dynamo.update(params, function (error, data){
                         if(error) console.log(error)
                         else {
                             console.log("Updated item successfully in DynamoDB...", JSON.stringify(data))
-                            console.log("Sending email of Update...")
                             sendEmail(message, dataQuestion, dataAnswer)
                         }
                     })
@@ -146,10 +151,10 @@ exports.handler = (event, context, callback) => {
             }
         }
     })
-    console.log("in end")
 };
 
 var sendEmail = (message, dataQuestion, dataAnswer) => {
+    console.log("Sending email.....")
     let updateTemplate= "";
     let apiTemplate = "";
     let oldTemplate = "";
@@ -189,8 +194,6 @@ var sendEmail = (message, dataQuestion, dataAnswer) => {
         "NOTE: THIS IS AN AUTOMATED MAIL. PLEASE DO NOT REPLY DIRECTLY TO THIS MAIL."+
         "IF YOU HAVE ANY COMPLAINTS OR QUESTIONS, PLEASE CONTACT US AT suthar.p@northeastern.edu"
 
-    let fromMail = "no-reply@"+process.env.DOMAIN
-    //check dynamoDB
     let emailParams = {
         Destination: {
             ToAddresses: [message.ToAddresses.username],
@@ -203,13 +206,13 @@ var sendEmail = (message, dataQuestion, dataAnswer) => {
 
             Subject: { Data: "Question Notification" },
         },
-        Source: fromMail,
+        Source: "no-reply@"+process.env.DOMAIN,
     };
 
     let sendEmailPromise = ses.sendEmail(emailParams).promise()
     sendEmailPromise
         .then(function(result) {
-            console.log(result);
+            console.log("Email sent successfully.....", result);
         })
         .catch(function(err) {
             console.error(err, err.stack);
