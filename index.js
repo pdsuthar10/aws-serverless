@@ -2,6 +2,7 @@ var aws = require("aws-sdk");
 var ses = new aws.SES({ region: "us-east-1" });
 var dynamo = new aws.DynamoDB.DocumentClient();
 var crypto = require('crypto');
+require('dotenv').config();
 
 exports.handler = (event, context, callback) => {
     let message = JSON.parse(event.Records[0].Sns.Message);
