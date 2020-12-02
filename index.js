@@ -75,6 +75,38 @@ exports.handler = (event, context, callback) => {
                 }
 
                 if(message.type === 'DELETE'){
+                    let searchParams = {
+                        TableName: "csye6225",
+                        ProjectionExpression: "#qid, #aid",
+                        FilterExpression: "#qid = :question_id AND #aid = :answer_id",
+                        ExpressionAttributeNames:{
+                            "#qid" : "question_id",
+                            "#aid" : "answer_id"
+                        },
+                        ExpressionAttributeValues: {
+                            ":question_id": newObject.question_id,
+                            ":answer_id": newObject.answer_id
+                        }
+                    }
+                    console.log("Scanning Dynamo to delete records for the answer deleted....")
+                    dynamo.scan(searchParams, function (error, data){
+                        if(error) console.log("Error in scanning of DynamoDB....")
+                        else{
+                            console.log("Scan succeeded...")
+                            data.Items.forEach(function (record){
+                                let deleteParams = {
+                                    TableName: "csye6225",
+                                    Key: {
+                                        email_hash: record.email_hash
+                                    }
+                                }
+                                dynamo.delete(deleteParams, function (error, data){
+                                    if(error) console.log("Error in deleting record...")
+                                    else console.log("Deleted record successfully....")
+                                })
+                            })
+                        }
+                    })
                     sendEmail(message, dataQuestion, dataAnswer)
                 }else {
                     dynamo.put(params, function (error, data) {
