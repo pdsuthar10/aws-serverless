@@ -123,7 +123,7 @@ exports.handler = (event, context, callback) => {
     console.log("in end")
 };
 
-const sendEmail = (message) => {
+var sendEmail = (message) => {
     let updateTemplate= "";
     let apiTemplate = "";
     let oldTemplate = "";
