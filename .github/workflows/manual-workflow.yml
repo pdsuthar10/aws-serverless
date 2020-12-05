@@ -1,4 +1,4 @@
-name: Deploy revised Lambda Function
+name: Deploy revised Lambda Function manually
 
 env:
   ARTIFACT_NAME: csye6225-lambda-${{ github.run_number }}.zip
