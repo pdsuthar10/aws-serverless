@@ -1,12 +1,10 @@
-name: Deploy revised Lambda Function
+name: Manual trigger workflow
 
 env:
   ARTIFACT_NAME: csye6225-lambda-${{ github.run_number }}.zip
   AWS_REGION: us-east-1
 
-on:
-  push:
-    branches: [ main ]
+on: workflow_dispatch
 
 
 jobs:
